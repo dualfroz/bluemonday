@@ -337,16 +337,32 @@ func multiSplit(value string, seps ...string) []string {
 	return curArray
 }
 
+// recursiveCheck reports whether value can be split, in order, into groups
+// of tokens each accepted by one of funcs. The outcome depends only on how
+// many tokens remain, so memoizing on that length keeps the search
+// polynomial without changing which values are accepted.
 func recursiveCheck(value []string, funcs []func(string) bool) bool {
+	memo := make(map[int]bool, len(value))
+	return recursiveCheckMemo(value, funcs, memo)
+}
+
+func recursiveCheckMemo(value []string, funcs []func(string) bool, memo map[int]bool) bool {
+	if cached, ok := memo[len(value)]; ok {
+		return cached
+	}
+	result := false
+outer:
 	for i := 0; i < len(value); i++ {
 		tempVal := strings.Join(value[:i+1], " ")
 		for _, j := range funcs {
-			if j(tempVal) && (len(value[i+1:]) == 0 || recursiveCheck(value[i+1:], funcs)) {
-				return true
+			if j(tempVal) && (len(value[i+1:]) == 0 || recursiveCheckMemo(value[i+1:], funcs, memo)) {
+				result = true
+				break outer
 			}
 		}
 	}
-	return false
+	memo[len(value)] = result
+	return result
 }
 
 func in(value []string, arr []string) bool {
